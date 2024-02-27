@@ -1,11 +1,26 @@
-from NOAH.constants.constants import *
 import itertools
+import os
+
+from constants.constants import (
+    DATA_PATH,
+    MOTIFF_BASE_LENGTH,
+    NEGATIVE,
+    POSITIVE_HIGH,
+    THRESHOLD,
+    VALID_AMINOACIDS,
+)
 
 
 class Parser:
     # Class to parse all the used files
-    def __init__(self, IEDB_file=None, csv_file=None, aligment_file=None,
-                 valid_letters=VALID_AMINOACIDS, length=MOTIFF_BASE_LENGTH):
+    def __init__(
+        self,
+        IEDB_file=None,
+        csv_file=None,
+        aligment_file=None,
+        valid_letters=VALID_AMINOACIDS,
+        length=MOTIFF_BASE_LENGTH,
+    ):
         """
         :param IEDB_file: IEDB database in csv format
         :param csv_file: Additional file with user defined data format(peptide;hla;qualitative_value)
@@ -55,7 +70,7 @@ class Parser:
         hla = None
         qualitativeValue = None
         peptide = None
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             next(f)
             next(f)
             for line in f:
@@ -105,13 +120,19 @@ class Parser:
 
         # Extract and verify data
         print("     Reading data files")
-        for element in itertools.chain(self.process_IEDB_data_generator(self.IEDB_file),
-                                       self.process_csv_data_generator(self.csv_file)):
+        for element in itertools.chain(
+            self.process_IEDB_data_generator(self.IEDB_file),
+            self.process_csv_data_generator(self.csv_file),
+        ):
             peptide, hla, qual = element
             if not peptide or not hla or not qual:
                 continue
             peptide_set = set(peptide)
-            if hla in self.hla_set and not peptide_set.difference(self.valid_letters) and len(peptide) == self.length:
+            if (
+                hla in self.hla_set
+                and not peptide_set.difference(self.valid_letters)
+                and len(peptide) == self.length
+            ):
                 # sets remove identical repeated entry's without removing all of them
                 used_peptides.setdefault(hla, {}).setdefault(peptide, set()).add(qual)
                 final_dict.setdefault(qual, {}).setdefault(hla, set()).add(peptide)
@@ -135,7 +156,9 @@ class Parser:
         for hla, peptides_set in final_dict[NEGATIVE].items():
             if len(peptides_set) >= self.minimum_data_background:
                 hla_with_background.add(hla)
-        correct_hlas = list(self.hla_set.intersection(hla_with_signal, hla_with_background))
+        correct_hlas = list(
+            self.hla_set.intersection(hla_with_signal, hla_with_background)
+        )
 
         return final_dict, test_data_dict, correct_hlas
 
@@ -155,8 +178,8 @@ class Parser:
                 if crystal_count >= threshold:
                     key_pos.setdefault(pos, []).append(residue)
                     sim_weight.setdefault(pos, {}).setdefault(residue, crystal_count)
-                #env = [int(x) for x in line[1].split(',')]
-                #key_pos[pos] = env
+                # env = [int(x) for x in line[1].split(',')]
+                # key_pos[pos] = env
         return key_pos, sim_weight
 
     def parse_aligment_file(self, alignment_file):
@@ -192,15 +215,19 @@ class Parser:
 
 if __name__ == "__main__":
     print("PARSING")
-    parser = Parser("../data/IEDB_data.csv", None, aligment_file="../data/HLA.pfam")
-    data, test_data, hla_list, hla_aligment, key_positions, sim_weight = parser.parse_all()
+    parser = Parser(
+        os.path.join(__file__, "../data/IEDB_data.csv"),
+        None,
+        aligment_file=os.path.join(__file__, "../data/hla_aligment.txt"),
+    )
+    data, test_data, hla_list, hla_aligment, key_positions, sim_weight = (
+        parser.parse_all()
+    )
     print(list(test_data.keys()))
-    with open("../test/data_to_predict.txt", "w") as inn:
+    with open(os.path.join(__file__, "../test/data_to_predict.txt"), "w") as inn:
         for hla in hla_list:
             for qual in test_data[hla]:
                 for peptide in test_data[hla][qual]:
                     inn.write("%s\t%s\t%s\n" % (peptide, hla, qual))
 
-
     print(hla_list)
-

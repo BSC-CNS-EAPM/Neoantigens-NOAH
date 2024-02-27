@@ -1,8 +1,9 @@
-from NOAH.predictor.PredictorCore import PredictorCore
-from NOAH.constants.constants import *
-import numpy as np
 import pickle
 import sys
+
+import numpy as np
+from constants.constants import NEGATIVE, POSITIVE, POSITIVE_HIGH, POSITIVE_INTERMEDIATE
+from predictor.PredictorCore import PredictorCore
 
 
 def rounder(function):
@@ -10,15 +11,18 @@ def rounder(function):
     def wrapper(*args, **kwargs):
         result = np.round(function(*args, **kwargs), 3)
         return result
+
     return wrapper
 
 
 def score_MCC(TP, FP, TN, FN):
     # Computes the MCC given a confusion matrix
     try:
-        MCC = ((TP * TN) - (FP * FN)) / ((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)) ** 0.5
+        MCC = ((TP * TN) - (FP * FN)) / (
+            (TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)
+        ) ** 0.5
     except ZeroDivisionError:
-        MCC = ((TP * TN) - (FP * FN))
+        MCC = (TP * TN) - (FP * FN)
     return MCC
 
 
@@ -47,7 +51,17 @@ def confusion_matrix_from_predictet_data(data_scored, data_qual, threshold):
 class Scorer(PredictorCore):
     # Trained model
 
-    def __init__(self, hla_to_env, env_to_hla, hla_list, motif_length, key_positions, sim_weight, valid_letters, likelyhood_matrix):
+    def __init__(
+        self,
+        hla_to_env,
+        env_to_hla,
+        hla_list,
+        motif_length,
+        key_positions,
+        sim_weight,
+        valid_letters,
+        likelyhood_matrix,
+    ):
         """
         :param hla_to_env: dict, Mapping of the HLA to their environments
         :param env_to_hla: dict, Mapping of the env to all the HLA associated to it
@@ -58,7 +72,9 @@ class Scorer(PredictorCore):
         :param valid_letters: list of valid amino acids
         :param likelyhood_matrix: numpy ndarray with all the likelihoods
         """
-        PredictorCore.__init__(self, hla_list, motif_length, key_positions, sim_weight, valid_letters)
+        PredictorCore.__init__(
+            self, hla_list, motif_length, key_positions, sim_weight, valid_letters
+        )
 
         self.hla_to_env = hla_to_env
         self.likelihood_matrix = likelyhood_matrix
@@ -78,9 +94,14 @@ class Scorer(PredictorCore):
         for i, letter in enumerate(peptide):
             hla_num = self.hla_to_num[self.env_to_hla[i][hla][0]]
             if letter in self.valid_letters:
-                score += self.likelihood_matrix[i][hla_num][self.letters_to_nums[letter]]
+                score += self.likelihood_matrix[i][hla_num][
+                    self.letters_to_nums[letter]
+                ]
             elif verb:
-                print("WARNING: %s is not a valid character, skipping position %s of peptide %s" % (letter, i, peptide))
+                print(
+                    "WARNING: %s is not a valid character, skipping position %s of peptide %s"
+                    % (letter, i, peptide)
+                )
         return score
 
     def _score_unknown(self, peptide, hla, verb=True):
@@ -95,7 +116,10 @@ class Scorer(PredictorCore):
             if letter in self.valid_letters:
                 score += self.unknown_hla_map[hla][i][self.letters_to_nums[letter]]
             elif verb:
-                print("WARNING: %s is not a valid character, skipping position %s of peptide %s" % (letter, i, peptide))
+                print(
+                    "WARNING: %s is not a valid character, skipping position %s of peptide %s"
+                    % (letter, i, peptide)
+                )
         return score
 
     @rounder
@@ -161,12 +185,18 @@ class Scorer(PredictorCore):
                             continue
                         score = self._score(peptide, hla)
                         if score <= threshold:
-                            if qualitative_value in [POSITIVE_HIGH, POSITIVE_INTERMEDIATE]:
+                            if qualitative_value in [
+                                POSITIVE_HIGH,
+                                POSITIVE_INTERMEDIATE,
+                            ]:
                                 TP += 1
                             elif qualitative_value == NEGATIVE:
                                 FP += 1
                         elif score > threshold:
-                            if qualitative_value in [POSITIVE_HIGH, POSITIVE_INTERMEDIATE]:
+                            if qualitative_value in [
+                                POSITIVE_HIGH,
+                                POSITIVE_INTERMEDIATE,
+                            ]:
                                 FN += 1
                             elif qualitative_value == NEGATIVE:
                                 TN += 1
@@ -174,7 +204,7 @@ class Scorer(PredictorCore):
 
     def save_pickle(self, name):
         print(name)
-        with open(name, 'wb') as inn:
+        with open(name, "wb") as inn:
             pickle.dump(self, inn)
 
     def score_peptide(self, sequence, *args):
@@ -227,15 +257,23 @@ class Scorer(PredictorCore):
         # Loads and prepares the model to be able to do deNovo predictions
         if hla in self.unknown_hlas[0]:
             self.hla_list.append(hla)
-            similarities = self.compare_hla_envs(hla, self.compare_two_global_environemnts)
-            self.unknown_hla_map.setdefault(hla, self._create_unknownhla_matrix_skeleton())
+            similarities = self.compare_hla_envs(
+                hla, self.compare_two_global_environemnts
+            )
+            self.unknown_hla_map.setdefault(
+                hla, self._create_unknownhla_matrix_skeleton()
+            )
             for position in range(self.motif_length):
                 bestscore = similarities[position][0][0]
                 score = similarities[position][0][0]
                 count = 0
                 while bestscore == score:
-                    hla_num = self.hla_to_num[self.env_to_hla[position][similarities[position][0][1]][0]]
-                    self.unknown_hla_map[hla][position] += self.likelihood_matrix[position][hla_num]
+                    hla_num = self.hla_to_num[
+                        self.env_to_hla[position][similarities[position][0][1]][0]
+                    ]
+                    self.unknown_hla_map[hla][position] += self.likelihood_matrix[
+                        position
+                    ][hla_num]
                     count += 1
                     try:
                         score = similarities[position][count][0]
@@ -258,5 +296,3 @@ class Scorer(PredictorCore):
         r_2 = len(self.valid_letters)
         matrix = np.zeros(shape=(r_1, r_2), dtype=float)
         return matrix
-
-

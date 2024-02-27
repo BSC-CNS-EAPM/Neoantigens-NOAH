@@ -1,27 +1,38 @@
-import utilities.utilities as utilities
-import sys
 import argparse
-import glob
-from predictor.Model_builder import *
-from hlaizer.parser import *
+import multiprocessing as mp
+import sys
+
+import numpy as np
+import utilities
+from hlaizer.parser import Parser
 
 
 def parse_args():
     """
-        Parse command line arguments
-        :returns:
+    Parse command line arguments
+    :returns:
     """
     desc = """Main Script that loads a given model and a file with the peptides to predict. 
     Check the Documentation "README.md" for more information about the usage"""
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("-i", required=True, help="File with the peptides to Predict. The file must have the following"
-                                                  "structure; peptide  HLA")
-    parser.add_argument("-seq", default=None, help="File with the proteic sequences for the unknown HLAs (Selex format)")
+    parser.add_argument(
+        "-i",
+        required=True,
+        help="File with the peptides to Predict. The file must have the following"
+        "structure; peptide  HLA",
+    )
+    parser.add_argument(
+        "-seq",
+        default=None,
+        help="File with the proteic sequences for the unknown HLAs (Selex format)",
+    )
     parser.add_argument("-o", required=True, help="Output file")
-    parser.add_argument("-model", required=True, help="Path to where the models are stored")
+    parser.add_argument(
+        "-model", required=True, help="Path to where the models are stored"
+    )
     parser.add_argument("-processors", default=1, help="Number of processors to use")
     args = parser.parse_args()
-    return args.i, args.seq, args.o, args.models, args.processors
+    return args.i, args.seq, args.o, args.model, args.processors
 
 
 def process_peptides(model, data):
@@ -39,9 +50,13 @@ def process_peptides(model, data):
         try:
             result = model.score_peptide(peptide, hla)
             for processed_hla in result:
-                results.setdefault(processed_hla, {}).setdefault(peptide, result[processed_hla][peptide])
+                results.setdefault(processed_hla, {}).setdefault(
+                    peptide, result[processed_hla][peptide]
+                )
         except:
-            sys.stderr.write("Error ocurred while processing %s for HLA %s\n" % (peptide, hla))
+            sys.stderr.write(
+                "Error ocurred while processing %s for HLA %s\n" % (peptide, hla)
+            )
     return results
 
 
@@ -50,7 +65,7 @@ def main(input_file, hla_seq, output, model, processors):
     try:
         scorer = utilities.load_model(model)
     except:
-        sys.stderr("Error: Unable to load model %s\n" % model)
+        raise Exception("Error: Unable to load model %s\n" % model)
 
     if hla_seq:
         parser = Parser()
@@ -69,13 +84,18 @@ def main(input_file, hla_seq, output, model, processors):
         result = worker.get()
         for hla in result:
             for peptide in result[hla]:
-                output_data.setdefault(hla, {}).setdefault(peptide, result[hla][peptide])
+                output_data.setdefault(hla, {}).setdefault(
+                    peptide, result[hla][peptide]
+                )
 
     print("Saving results")
     try:
         file = open(output, "w")
     except IOError:
-        sys.stderr.write("WARNING: Can't open outputfile %s, using _tmp_result.txt instead\n" % output)
+        sys.stderr.write(
+            "WARNING: Can't open outputfile %s, using _tmp_result.txt instead\n"
+            % output
+        )
         file = open("_tmp_result.txt", "w")
 
     for hla in output_data:
@@ -86,7 +106,7 @@ def main(input_file, hla_seq, output, model, processors):
 
 
 if __name__ == "__main__":
-    #main("data_proba.txt", os.path.join(DATA_PATH, "HLA-A.pfam"), "resu_random.txt",
+    # main("data_proba.txt", os.path.join(DATA_PATH, "HLA-A.pfam"), "resu_random.txt",
     # os.path.join(DATA_PATH, "NOAH_9.pkl"), 1)
     input_file, hla_seq, output, models, processors = parse_args()
     main(input_file, hla_seq, output, models, processors)

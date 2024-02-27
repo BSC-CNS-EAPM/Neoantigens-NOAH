@@ -1,9 +1,16 @@
-from NOAH.constants.constants import *
 import numpy as np
+from constants.constants import VALID_AMINOACIDS
 
 
 class PredictorCore:
-    def __init__(self, hla_list, motif_length, key_positions, sim_weight, valid_letters=VALID_AMINOACIDS):
+    def __init__(
+        self,
+        hla_list,
+        motif_length,
+        key_positions,
+        sim_weight,
+        valid_letters=VALID_AMINOACIDS,
+    ):
         """
         Abstract class with all the base properties of the Motif
         :param hla_list: list of hlas to use
@@ -26,7 +33,9 @@ class PredictorCore:
         # Mapping
         self.hla_to_env = None  # {pos:{hla:env}}  None for the abstract class
         self.env_to_hla = None  # {pos:{hla:[hlas_to_use]}}
-        self.letters_to_nums = {letter: i for i, letter in enumerate(valid_letters)}  # {letter: num}
+        self.letters_to_nums = {
+            letter: i for i, letter in enumerate(valid_letters)
+        }  # {letter: num}
         self.hla_to_num = {hla: i for i, hla in enumerate(hla_list)}  # {hla: num}
 
     def set_similarity_matrix(self, matrix):
@@ -46,11 +55,13 @@ class PredictorCore:
             for hla_2 in self.hla_list:
                 if hla_2 != hla:
                     similarity = function_to_use(hla, hla_2, position)
-                    hla_similarities.setdefault(position, []).append((similarity, hla_2))
+                    hla_similarities.setdefault(position, []).append(
+                        (similarity, hla_2)
+                    )
             hla_similarities[position].sort(reverse=True)
         return hla_similarities
 
-    def compare_two_global_environemnts(self,  hla_1, hla_2, position):
+    def compare_two_global_environemnts(self, hla_1, hla_2, position):
         """
         Compares two HLAs taking into account all the environments used to build the model (the hla sequence and the ones fused to it)
         Note: This is one of the posible functions used by compare hla envs
@@ -63,13 +74,21 @@ class PredictorCore:
         similarity_list = []
         for hla in self.env_to_hla[position][hla_2]:
             env_2 = self.hla_to_env[position][hla]
-            similarity = np.array(list(map(self.compare_one_letter, env_1, env_2)), dtype=np.float64)
-            position_weight = np.array([self.similarity_weight[position][x] for x in self.key_positions[position]], dtype=np.float64)
+            similarity = np.array(
+                list(map(self.compare_one_letter, env_1, env_2)), dtype=np.float64
+            )
+            position_weight = np.array(
+                [
+                    self.similarity_weight[position][x]
+                    for x in self.key_positions[position]
+                ],
+                dtype=np.float64,
+            )
             position_weight /= np.sum(position_weight)
             similarity *= position_weight
             similarity = np.sum(similarity)
             similarity_list.append(similarity)
-        similarity = sum(similarity_list)/len(similarity_list)
+        similarity = sum(similarity_list) / len(similarity_list)
         return similarity
 
     def compare_two_HLAs(self, hla_1, hla_2, position):
@@ -83,8 +102,13 @@ class PredictorCore:
         """
         env_1 = self.hla_to_env[position][hla_1]
         env_2 = self.hla_to_env[position][hla_2]
-        similarity = np.array(list(map(self.compare_one_letter, env_1, env_2)), dtype=np.float64)
-        position_weight = np.array([self.similarity_weight[position][x] for x in self.key_positions[position]], dtype=np.float64)
+        similarity = np.array(
+            list(map(self.compare_one_letter, env_1, env_2)), dtype=np.float64
+        )
+        position_weight = np.array(
+            [self.similarity_weight[position][x] for x in self.key_positions[position]],
+            dtype=np.float64,
+        )
         position_weight /= np.sum(position_weight)
         similarity *= position_weight
         similarity = np.sum(similarity)
@@ -130,5 +154,3 @@ class PredictorCore:
             for hla in self.hla_list:
                 env_to_hla.setdefault(i, {}).setdefault(hla, [hla])
         return env_to_hla
-
-

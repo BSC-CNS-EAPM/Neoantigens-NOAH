@@ -1,7 +1,7 @@
+import multiprocessing as mp
 import pickle
 import sys
-from constants.constants import *
-import multiprocessing as mp
+
 import numpy as np
 
 
@@ -10,8 +10,14 @@ def load_model(file_path):
         with open(file_path, "rb") as inn:
             motif = pickle.load(inn)
         return motif
+        # file = open(file_path, "rb")
+        # motif = pickle.load(file)
+        # file.close()
+        # return motif
     except IOError:
-        sys.stderr.write("ERROR UNABLE TO LOAD MOTIF, try using another python version\n")
+        raise Exception(
+            "ERROR UNABLE TO LOAD MOTIF, try using another python version\n"
+        )
 
 
 def load_data(file_path):
@@ -20,8 +26,10 @@ def load_data(file_path):
     try:
         with open(file_path, "r") as inn:
             for line in inn:
+                if line.startswith("peptide,HLA"):
+                    continue
                 line = line.rstrip()
-                line = line.split()
+                line = line.split(",")
                 peptide = line[0]
                 hla = line[1]
                 data.append((peptide, hla))
@@ -29,7 +37,7 @@ def load_data(file_path):
                     qualitativeValue = line[2]
                     data_qual.setdefault(hla, {}).setdefault(peptide, qualitativeValue)
     except IOError:
-        sys.stderr.write("Error: input file not found\n")
+        raise Exception("Error: input file not found\n")
     if data_qual:
         return data, data_qual
     else:
@@ -44,9 +52,13 @@ def process_peptides(motif, data):
         try:
             result = motif.score_peptide(peptide, hla)
             for processed_hla in result:
-                results.setdefault(processed_hla, {}).setdefault(peptide, result[processed_hla][peptide])
+                results.setdefault(processed_hla, {}).setdefault(
+                    peptide, result[processed_hla][peptide]
+                )
         except:
-            sys.stderr.write("Error ocurred while processing %s for HLA %s\n" % (peptide, hla))
+            raise Exception(
+                "Error ocurred while processing %s for HLA %s\n" % (peptide, hla)
+            )
     return results
 
 
@@ -61,7 +73,9 @@ def score_peptides_paralleled(processors, loaded_data, motif):
         result = worker.get()
         for hla in result:
             for peptide in result[hla]:
-                output_data.setdefault(hla, {}).setdefault(peptide, result[hla][peptide])
+                output_data.setdefault(hla, {}).setdefault(
+                    peptide, result[hla][peptide]
+                )
     pool.terminate()
     return output_data
 
@@ -75,5 +89,3 @@ def print_motif(motif, hla):
             value = motif.likelihood_matrix[i][hla_num][motif.letters_to_nums[letter]]
             motif_dict.setdefault(i, {}).setdefault(letter, value)
     return motif_dict
-
-

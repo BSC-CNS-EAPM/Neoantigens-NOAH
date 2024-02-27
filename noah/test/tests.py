@@ -1,11 +1,22 @@
+import copy
+
+from hlaizer.parser import Parser
 from predictor.Model_builder import MotifMaker
 from utilities import utilities as utilities
-import copy
-from hlaizer.parser import Parser
 
 
-def IEDB_prediction_test(data, test_data, hla_list, hla_aligment, key_positions, sim_weight, data_to_score, processors,
-                         hla_seq, similarity_matrix):
+def IEDB_prediction_test(
+    data,
+    test_data,
+    hla_list,
+    hla_aligment,
+    key_positions,
+    sim_weight,
+    data_to_score,
+    processors,
+    hla_seq,
+    similarity_matrix,
+):
     """
     Test performance of the model
     :param data: data to use to build the model
@@ -22,8 +33,15 @@ def IEDB_prediction_test(data, test_data, hla_list, hla_aligment, key_positions,
     """
     parser = Parser()
     print("Making Model with fused background")
-    motif = MotifMaker(data=data, test_data=test_data, hla_list=hla_list, motif_length=9,
-                       key_positions=key_positions, sim_weight=sim_weight, hla_aligment=hla_aligment)
+    motif = MotifMaker(
+        data=data,
+        test_data=test_data,
+        hla_list=hla_list,
+        motif_length=9,
+        key_positions=key_positions,
+        sim_weight=sim_weight,
+        hla_aligment=hla_aligment,
+    )
     motif.set_similarity_matrix(similarity_matrix)
     motif.set_random_model_type("fused")
     motif.initialize()
@@ -36,13 +54,27 @@ def IEDB_prediction_test(data, test_data, hla_list, hla_aligment, key_positions,
     hla_align = parser.parse_aligment_file(hla_seq)
     model_fused.load_sequences(hla_align)
     model_unique.load_sequences(hla_align)
-    prediction_negative = utilities.score_peptides_paralleled(processors, data_to_score, model_fused)
-    prediction_unique = utilities.score_peptides_paralleled(processors, data_to_score, model_unique)
+    prediction_negative = utilities.score_peptides_paralleled(
+        processors, data_to_score, model_fused
+    )
+    prediction_unique = utilities.score_peptides_paralleled(
+        processors, data_to_score, model_unique
+    )
     return prediction_negative, prediction_unique
 
 
-def deNovo_prediction_test(data, test_data, hla_list, hla_aligment, key_positions, sim_weight, data_to_score, processors,
-                           hla_seq, similarity_matrix):
+def deNovo_prediction_test(
+    data,
+    test_data,
+    hla_list,
+    hla_aligment,
+    key_positions,
+    sim_weight,
+    data_to_score,
+    processors,
+    hla_seq,
+    similarity_matrix,
+):
     """
     Test deNovo performance of the model
     :param data: data to use to build the model
@@ -77,15 +109,29 @@ def deNovo_prediction_test(data, test_data, hla_list, hla_aligment, key_position
             tmp_data[qualvalue].pop(hla, None)
         tmp_test_data[hla].pop(hla, None)
         tmp_hla_list.remove(hla)
-        motif = MotifMaker(data=tmp_data, test_data=tmp_test_data, hla_list=tmp_hla_list, motif_length=9,
-                           key_positions=key_positions, sim_weight=sim_weight, hla_aligment=hla_aligment)
+        motif = MotifMaker(
+            data=tmp_data,
+            test_data=tmp_test_data,
+            hla_list=tmp_hla_list,
+            motif_length=9,
+            key_positions=key_positions,
+            sim_weight=sim_weight,
+            hla_aligment=hla_aligment,
+        )
         motif.set_similarity_matrix(similarity_matrix)
         motif.set_random_model_type("fused")
         motif.initialize()
         motif.build()
         model_fused = motif.refine_model(int(processors))
-        motif = MotifMaker(data=tmp_data, test_data=tmp_test_data, hla_list=tmp_hla_list, motif_length=9,
-                           key_positions=key_positions, sim_weight=sim_weight, hla_aligment=hla_aligment)
+        motif = MotifMaker(
+            data=tmp_data,
+            test_data=tmp_test_data,
+            hla_list=tmp_hla_list,
+            motif_length=9,
+            key_positions=key_positions,
+            sim_weight=sim_weight,
+            hla_aligment=hla_aligment,
+        )
         motif.set_similarity_matrix(similarity_matrix)
         motif.set_random_model_type("unique")
         motif.initialize()
@@ -96,16 +142,30 @@ def deNovo_prediction_test(data, test_data, hla_list, hla_aligment, key_position
         hla_align = parser.parse_aligment_file(hla_seq)
         model_fused.load_sequences(hla_align)
         model_unique.load_sequences(hla_align)
-        prediction_fused = utilities.score_peptides_paralleled(processors, data_to_score_formated[hla], model_fused)
-        prediction_unique = utilities.score_peptides_paralleled(processors, data_to_score_formated[hla], model_unique)
+        prediction_fused = utilities.score_peptides_paralleled(
+            processors, data_to_score_formated[hla], model_fused
+        )
+        prediction_unique = utilities.score_peptides_paralleled(
+            processors, data_to_score_formated[hla], model_unique
+        )
         deNovo_fused.setdefault(hla, prediction_fused[hla])
         deNovo_unique.setdefault(hla, prediction_unique[hla])
 
     return deNovo_fused, deNovo_unique
 
 
-def Individual_prediction_test(data, test_data, hla_list, hla_aligment, key_positions, sim_weight, data_to_score,
-                               processors, hla_seq, similarity_matrix):
+def Individual_prediction_test(
+    data,
+    test_data,
+    hla_list,
+    hla_aligment,
+    key_positions,
+    sim_weight,
+    data_to_score,
+    processors,
+    hla_seq,
+    similarity_matrix,
+):
     """
     Test performance of the model without merging environments
     :param data: data to use to build the model
@@ -121,15 +181,29 @@ def Individual_prediction_test(data, test_data, hla_list, hla_aligment, key_posi
     :return: predictions
     """
     print("Making Individual Model with Fused background")
-    motif = MotifMaker(data=data, test_data=test_data, hla_list=hla_list, motif_length=9,
-                       key_positions=key_positions, sim_weight=sim_weight, hla_aligment=hla_aligment)
+    motif = MotifMaker(
+        data=data,
+        test_data=test_data,
+        hla_list=hla_list,
+        motif_length=9,
+        key_positions=key_positions,
+        sim_weight=sim_weight,
+        hla_aligment=hla_aligment,
+    )
     motif.set_similarity_matrix(similarity_matrix)
     motif.set_random_model_type("fused")
     motif.initialize()
     model_fused = motif.build()
     print("Making Individual Model with Unique background")
-    motif = MotifMaker(data=data, test_data=test_data, hla_list=hla_list, motif_length=9,
-                       key_positions=key_positions, sim_weight=sim_weight, hla_aligment=hla_aligment)
+    motif = MotifMaker(
+        data=data,
+        test_data=test_data,
+        hla_list=hla_list,
+        motif_length=9,
+        key_positions=key_positions,
+        sim_weight=sim_weight,
+        hla_aligment=hla_aligment,
+    )
     motif.set_similarity_matrix(similarity_matrix)
     motif.set_random_model_type("unique")
     motif.initialize()
@@ -139,6 +213,10 @@ def Individual_prediction_test(data, test_data, hla_list, hla_aligment, key_posi
     hla_align = parser.parse_aligment_file(hla_seq)
     model_fused.load_sequences(hla_align)
     model_unique.load_sequences(hla_align)
-    prediction_fused = utilities.score_peptides_paralleled(processors, data_to_score, model_fused)
-    prediction_unique = utilities.score_peptides_paralleled(processors, data_to_score, model_unique)
+    prediction_fused = utilities.score_peptides_paralleled(
+        processors, data_to_score, model_fused
+    )
+    prediction_unique = utilities.score_peptides_paralleled(
+        processors, data_to_score, model_unique
+    )
     return prediction_fused, prediction_unique

@@ -1,12 +1,13 @@
-import numpy as np
-import multiprocessing as mp
 import copy
-from NOAH.constants.constants import *
-from NOAH.predictor import Scorer
-from NOAH.predictor.PredictorCore import PredictorCore
+import multiprocessing as mp
+
+import numpy as np
+from constants.constants import NEGATIVE, POSITIVE_HIGH, VALID_AMINOACIDS
+from predictor import Scorer
+from predictor.PredictorCore import PredictorCore
 
 # ignore warning of 0 division errors (infinit positions are expected if no pseudocounts are used)
-np.seterr(divide='ignore')
+np.seterr(divide="ignore")
 
 
 class MotifMaker(PredictorCore):
@@ -14,8 +15,18 @@ class MotifMaker(PredictorCore):
     Class That constructs and refines the model
     """
 
-    def __init__(self, data, test_data, hla_list, motif_length, key_positions, sim_weight, hla_aligment,
-                 valid_letters=VALID_AMINOACIDS, pseudocounts=1):
+    def __init__(
+        self,
+        data,
+        test_data,
+        hla_list,
+        motif_length,
+        key_positions,
+        sim_weight,
+        hla_aligment,
+        valid_letters=VALID_AMINOACIDS,
+        pseudocounts=1,
+    ):
         """
 
         :param data: data to use to build the model
@@ -30,7 +41,9 @@ class MotifMaker(PredictorCore):
         """
 
         # Initialize Model
-        PredictorCore.__init__(self, hla_list, motif_length, key_positions, sim_weight, valid_letters)
+        PredictorCore.__init__(
+            self, hla_list, motif_length, key_positions, sim_weight, valid_letters
+        )
 
         # Base Parameters
         self.data = data  # {qualitative_value : {hla:[peptides]}}
@@ -42,12 +55,20 @@ class MotifMaker(PredictorCore):
 
         # Background Model Parameters
         self.random_model_type = "negative"
-        self.valid_random = ["random", "all", "negative", "unique", "fused"] # already implemented random models
+        self.valid_random = [
+            "random",
+            "all",
+            "negative",
+            "unique",
+            "fused",
+        ]  # already implemented random models
         self.random_model = None
 
         # Mappings
-        self.hla_to_env = self.extract_binding_environment(self.hla_aligment)  # {pos:{hla:env}}
-        self.env_to_hla = self.prepare_env_to_hla()   # {pos:{hla:[hlas_to_use]}}
+        self.hla_to_env = self.extract_binding_environment(
+            self.hla_aligment
+        )  # {pos:{hla:env}}
+        self.env_to_hla = self.prepare_env_to_hla()  # {pos:{hla:[hlas_to_use]}}
 
         # Model Parameters
         self.hla_data = {}
@@ -61,7 +82,10 @@ class MotifMaker(PredictorCore):
         if random_type in self.valid_random:
             self.random_model_type = random_type
         else:
-            print("Random model type %s not found. Valid random types: %s" % (random_type, " ".join(self.valid_random)))
+            print(
+                "Random model type %s not found. Valid random types: %s"
+                % (random_type, " ".join(self.valid_random))
+            )
             print("Using the default one")
 
     def set_random_model(self, random_model):
@@ -78,7 +102,9 @@ class MotifMaker(PredictorCore):
             # Background model using all the data available
             final_random_model = np.sum(self.random_model, axis=0)  # Add all positions
             final_random_model = np.sum(final_random_model, axis=0)  # Add all envs
-            final_random_model /= np.sum(final_random_model)  # Compute frequencies using Total
+            final_random_model /= np.sum(
+                final_random_model
+            )  # Compute frequencies using Total
 
         elif self.random_model_type == "unique":
             # Background model with only the frequencies for its HLA
@@ -88,7 +114,12 @@ class MotifMaker(PredictorCore):
 
         elif self.random_model_type == "random":
             # Background model using same frequencies for all the amino acids
-            final_random_model = np.array([(1.0)/len(self.valid_letters) for x in range(len(self.valid_letters))])
+            final_random_model = np.array(
+                [
+                    (1.0) / len(self.valid_letters)
+                    for x in range(len(self.valid_letters))
+                ]
+            )
 
         elif self.random_model_type == "fused":
             # Background model using the frequencies of all the used HLA to build the model
@@ -114,7 +145,9 @@ class MotifMaker(PredictorCore):
         self.freq_matrix = self._create_matrix_skeleton()
         self._compute_frequencies()
         final_random_model = self._compute_random_model()
-        self.likelihood_matrix = self._compute_likelihood(self.freq_matrix, final_random_model)
+        self.likelihood_matrix = self._compute_likelihood(
+            self.freq_matrix, final_random_model
+        )
         return self._instantiate_model()
 
     def initialize(self):
@@ -156,7 +189,9 @@ class MotifMaker(PredictorCore):
             for peptide in data[hla]:
                 for i, letter in enumerate(peptide):
                     try:
-                        matrix[i][self.hla_to_num[hla]][self.letters_to_nums[letter]] += 1
+                        matrix[i][self.hla_to_num[hla]][
+                            self.letters_to_nums[letter]
+                        ] += 1
                     except KeyError:
                         # Hla without enough data
                         hla_warnings.add(hla)
@@ -172,17 +207,27 @@ class MotifMaker(PredictorCore):
                 for uhla in self.env_to_hla[i][hla]:
                     uhla_num = self.hla_to_num[uhla]
                     self.freq_matrix[i][self.hla_to_num[hla]] += matrix[i][uhla_num]
-                self.freq_matrix[i][self.hla_to_num[hla]] /= np.sum(self.freq_matrix[i][self.hla_to_num[hla]])
+                self.freq_matrix[i][self.hla_to_num[hla]] /= np.sum(
+                    self.freq_matrix[i][self.hla_to_num[hla]]
+                )
 
     @staticmethod
     def _compute_likelihood(matrix_1, matrix_2):
-        final_matrix = np.log2(matrix_1/matrix_2)
+        final_matrix = np.log2(matrix_1 / matrix_2)
         final_matrix *= -1  # Because pep likes negatives values as the good ones
         return final_matrix
 
     def _instantiate_model(self):
-        return Scorer.Scorer(self.hla_to_env, self.env_to_hla, self.hla_list, self.motif_length, self.key_positions,
-                             self.similarity_weight, self.valid_letters, self.likelihood_matrix)
+        return Scorer.Scorer(
+            self.hla_to_env,
+            self.env_to_hla,
+            self.hla_list,
+            self.motif_length,
+            self.key_positions,
+            self.similarity_weight,
+            self.valid_letters,
+            self.likelihood_matrix,
+        )
 
     def compare_all_envs(self):
         # compares all the environments with each other
@@ -200,7 +245,7 @@ class MotifMaker(PredictorCore):
         MCC_1 = original_model.score_MCC(threshold, self.test_data)
         for i in range(self.motif_length):
             similarity = self.compare_two_HLAs(hla, hla, i)
-            #self.env_to_hla = copy.deepcopy(old_env)
+            # self.env_to_hla = copy.deepcopy(old_env)
             for similarity_tuple in hla_dict[hla][i]:
                 new_similarity = similarity_tuple[0]
                 refined_motif.env_to_hla = copy.deepcopy(self.env_to_hla)
@@ -208,8 +253,12 @@ class MotifMaker(PredictorCore):
                 refined_model = refined_motif.build()
                 refined_model.hla_list = [hla]
                 MCC_2 = refined_model.score_MCC(threshold, self.test_data)
-                if (similarity == new_similarity and MCC_1 - MCC_2 < 0.1) or MCC_1 - MCC_2 < -0.1:
-                    good_fusions.setdefault(i, {}).setdefault(hla, [hla]).append(similarity_tuple[1])
+                if (
+                    similarity == new_similarity and MCC_1 - MCC_2 < 0.1
+                ) or MCC_1 - MCC_2 < -0.1:
+                    good_fusions.setdefault(i, {}).setdefault(hla, [hla]).append(
+                        similarity_tuple[1]
+                    )
                 else:
                     continue
         return good_fusions
@@ -221,7 +270,11 @@ class MotifMaker(PredictorCore):
         workers = []
         print("Refining Model")
         for hla in self.hla_list:
-            workers.append(pool.apply_async(self._compare_models, (copy.deepcopy(self), hla, hla_dict)))
+            workers.append(
+                pool.apply_async(
+                    self._compare_models, (copy.deepcopy(self), hla, hla_dict)
+                )
+            )
         for worker in workers:
             good_fusions = worker.get()
             for i in range(self.motif_length):
@@ -231,5 +284,3 @@ class MotifMaker(PredictorCore):
         model = self.build()
         model.set_similarity_matrix(self.similarity_matrix)
         return model
-
-
