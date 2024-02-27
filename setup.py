@@ -6,9 +6,9 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     url='https://github.com/BSC-CNS-EAPM/Neoantigens-NOAH',
     license='MIT',
-    author='Oriol, Albert',
-    author_email='acanella@bsc.es',
-    description='A python packages of NOAH',
+    author='Pep Amengual, Oriol Gracia, Roc Farriol, Albert Cañellas',
+    author_email='',
+    description='A python package of NOAH',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     install_requires=[
