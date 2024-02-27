@@ -1,0 +1,10 @@
+## Things to do:
+
+1. Fix typos. All the documentation written has not been proofread so there will be a lot of typos
+2. Add more documentation to the code
+3. Add a list of HLA ids that should be known without requiring the user to load them
+4. Remove the feature to analyze HLAs based on a substring, or alternatively improve it.
+5. Use a correction for the multitesting performed on the peptides of different length than the model.
+6. Create a setup.py, rewrite the readme and write a documentation
+7. create a folder with the scripts used to create the plots for the paper
+8. extensively test that everything works

@@ -1,15 +1,16 @@
 # NOAH
-Provisional Readme meant for PEP
 
 To make the code work, the IEDB database should be putted into data/ with the name IEDB_data.csv
 
-To use the code export the path to your pythonpath
-export PYTHONPATH="PATH_TO_CODE/:$PYTHONPATH"
+To use the code install it with pip or pip3:
+    
+    pip install .
+    
 
 ## Algorithm
 
 The module core is divided in the following parts:
-1. Constants -> Variables that are constant and should not change, such as the valid aminoacids or the similarity matrices
+1. Constants -> Variables that are constant and should not change, such as the valid amino acids or the similarity matrices
 
 2. hlaizer/parser -> class that does the parsing of the text files that are required
 
@@ -51,8 +52,8 @@ First it builds a model of all the hla individually. Then for each hla it create
 
 Right now the criteria is the following: if the sequence for that position is equal, NOAH fuses both models if there is a gain in MCC, if they are not different, NOAH only fuses  them if the gain is bigger than 0.1
 
-### Denovo prediction
-To do denovo prediction what noah does is just to compare the new sequence with the already known ones. Noah doesn't build or computes anything new (because there is no data). Noah just uses an average of the most similar known hlas for each position.
+### *Denovo* prediction
+To do *denovo* prediction what noah does is just to compare the new sequence with the already known ones. Noah doesn't build or computes anything new (because there is no data). Noah just uses an average of the most similar known hlas for each position.
 
 ### HOW TO RUN NOAH
 
@@ -79,10 +80,17 @@ the arguments that you can use are the following:
     --alignment : Path to the file with the HLAs (default is the file named HLA.pfam inn the data folder) (Selex format)
     --background : Background model to use. Options are : (random, all, negative, unique, fused).fused is the recommended one and also the default
     --signal : Minimum number of peptides with good binding that an HLA must have to be modeled. default 50.
-    --noise : Minimum number of non-binding peptides that an HLA must have to be modeled. default 10
+    --noise : Minimum number of non-binding peptides that an HLA must have to be modelled. default 10
     --simMatrix : Similarity matrix to use. Options are: [blosum62, pam250, granthams, sneath]. default is sneath. I do not remember why, the latests test were performed with GRANTHAMS. However the matrix used does not have a big impact on the results.
 
+>[!TIP]
+>The command should look similar to:
+> 
+>     python noah/train_NOAH.py -o model_name --length 9
+
 At the end you will have a pickel with the model.
+
+
 
 #####
 
@@ -92,7 +100,7 @@ You have two options, you can use the script that scores the peptides automatica
 The first option is automatic, (how the code is meant to be used). The second option is more flexible but requires you to know what you are doing.
 
 ##### Using the script:
-you can use the script main_NOAH in command line with the required arguments. I have not tested  this script extensively and there has been a lot of modifications of the code so it would be good to use it more with diferent cases to see if it still works.
+you can use the script main_NOAH.py in command line with the required arguments. I have not tested  this script extensively and there has been a lot of modifications of the code so it would be good to use it more with different cases to see if it still works.
 The arguments are the following: (you can always check them with --help)
     
     # Required arguments
@@ -103,21 +111,28 @@ The arguments are the following: (you can always check them with --help)
     -seq : File with the proteic sequences for the unknown HLAs (Selex format) (right now you must give a selex file if there is any HLA not modelled in your list, pending to be changed)
     -processors : Number of processors to use, default 1
 
-##### using NOAH directly:
-first you must load the model using the utilities modul of NOAH (asuming you imported NOAH as NOAH):
+>[!TIP]
+>The command should look similar to:
+> 
+>     python noah/main_NOAH.py -i path_input_csv -o name_output.csv -model path_to_the_model
 
-    my_model = NOAH.utilities.load_model("PATH/TO/MODEL/model.pkl")
+##### using NOAH directly:
+first you must load the model using the utilities module of NOAH:
+
+    import noah.utilities
+    my_model = utilities.load_model("PATH/TO/MODEL/model.pkl")
 
 next you have to load the sequences that are not part of the model but should be recognized (you can give just give all of them it doe snot matter if they are already known)
 
 ##### to load the file
 
-    sequence_parser = NOAH.hlaizer.parser.Parser()
+    from hlaizer.parser import Parser 
+    sequence_parser = Parser()
     hla_alignment = sequence_parser.parse_aligment_file("PATH/TO/ALIGMENT_FILE_WITH_SELEX_FORMAT.pfam")
 ##### to add the sequences to the model
     my_model.load_sequences(hla_alignment)
 
-Finally you can just call the score function which will handle the rest (including peptides with diferent length).
+Finally you can just call the score function which will handle the rest (including peptides with different length).
 
 If you don't want to deal with formatting you can use the function:
 process_peptides from utilities which will handle the output formatting for you.
@@ -150,14 +165,15 @@ Here hla is an string with one identifier, the output is just the score
 
 processing an unknown peptide
 
-first you have to prepare the deNOVO functionality with:
+first you have to prepare the *deNOVO* functionality with:
 
     my_model._prepare_for_denovo(hla)
 
 Here hla is also an string matching only one identifier. this function returns nothing and should be called only once for each new hla.
 Afterwards, you can score any number of peptides with that hla without calling _prepare_for_denovo again.
 
-####WARNING: Do not call _prepare_for_denovo if the hla is part of the hla used to create the model or it will crash!
+> [!WARNING]
+> Do not call _prepare_for_denovo if the hla is part of the hla used to create the model or it will crash!
 
 You can find which HLAs have a model assigned with: my_model.hla_list  which is a list of hla identifiers
 You can find which unknown HLAS have been already prepared with: my_model.unknown_hla_map.keys() which is also a list of hla identifiers
@@ -169,14 +185,7 @@ Finally if you want to process peptides with different length than the model, yo
 Again hla is only one identifier, if the hla is not part of the hlas with a model assigned you should call _prepare_for_denovo before as previously explained.
 The output is also an score. (right now is the average of all the possible binding modes that the peptide can have)
 
-## Things to do:
 
-1. Fix typos. All the documentation written has not been proofread so there will be a lot of typos
-2. Add more documentation to the code
-3. Add a list of HLA ids that should be known without requiring the user to load them
-4. Remove the feature to analyze HLAs based on a substring, or alternatively improve it.
-5. Use a correction for the multitesting performed on the peptides of different length than the model.
-6. Create a setup.py, rewrite the readme and write a documentation
-7. create a folder with the scripts used to create the plots for the paper
-8. extensively test that everything works
 
+--------
+Thanks to Roc Farriol and Albert Cañellas for testing and bugs solving
