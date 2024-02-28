@@ -163,7 +163,7 @@ However, this requires more extra steps:
 
 Here hla is an string with one identifier, the output is just the score
 
-processing an unknown peptide
+###### Processing an unknown peptide:
 
 first you have to prepare the *deNOVO* functionality with:
 
@@ -175,10 +175,10 @@ Afterwards, you can score any number of peptides with that hla without calling _
 > [!WARNING]
 > Do not call _prepare_for_denovo if the hla is part of the hla used to create the model or it will crash!
 
-You can find which HLAs have a model assigned with: my_model.hla_list  which is a list of hla identifiers
-You can find which unknown HLAS have been already prepared with: my_model.unknown_hla_map.keys() which is also a list of hla identifiers
+You can find which HLAs have a model assigned with: my_model.hla_list  which is a list of hla identifiers.
+You can find which unknown HLAS have been already prepared with: my_model.unknown_hla_map.keys() which is also a list of hla identifiers.
 
-Finally if you want to process peptides with different length than the model, you should use
+Finally if you want to process peptides with different length than the model, you should use:
 
     my_model._diffsize_score(peptide, hla)
 
@@ -188,4 +188,5 @@ The output is also an score. (right now is the average of all the possible bindi
 
 
 --------
-Thanks to Roc Farriol and Albert Cañellas for testing and bugs solving
+Code made by Oriol Gracia, Pep Amengual.
+Thanks to Roc Farriol and Albert Cañellas for testing and bugs solving.
